@@ -1,0 +1,62 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+	<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+	<script src="soundfont-player.min.js"></script>
+</head>
+<body>
+<script>
+
+var ctx = new AudioContext();
+var soundfont = new Soundfont(ctx);
+var instrument = soundfont.instrument('accordion');
+instrument.onready(function() {
+  instrument.play('C1', 0)
+});
+var rain = soundfont.instrument('fx_1_rain');
+var ws = new WebSocket('ws://' + location.hostname + ':3001')
+ws.onopen = function(e) {
+  console.log('open')
+}
+
+var map = {}
+var mapCount = 0;
+var tonesCount = 0;
+var tones = [
+  'C',
+  'D',
+  'E',
+  'F',
+  'G',
+  'A',
+  'B'
+]
+while (mapCount < 50) {
+  if (!tones[tonesCount]) {
+    tonesCount = 0;
+  }
+  map[mapCount + 16] = tones[tonesCount];
+  mapCount++;
+  tonesCount++;
+}
+
+function messageToTone(data) {
+  var num = parseInt(data * 1000, 10)
+  console.log(num, map)
+  return map[num] + '1';
+}
+
+ws.onmessage = function(d) {
+  // Map to note.
+  var tone = messageToTone(d.data)
+  console.log(tone)
+  instrument.play(tone, 0)
+  setTimeout(function() {
+    rain.play(messageToTone(d.data * 1 + Math.floor(Math.random())), 0);
+  }, d.data * 1000)
+  
+}
+</script>
+</body>
+</html>
