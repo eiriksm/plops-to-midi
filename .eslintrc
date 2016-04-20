@@ -1,0 +1,26 @@
+{
+  "parser": "babel-eslint",
+  "env": {
+    "node": true,
+    "es6": true
+  },
+  "globals": {
+    "fetch": false
+  },
+  "rules": {
+    "quotes": [2, "single"],
+    "no-console": 0,
+    "react/wrap-multilines": 2,
+    "react/jsx-uses-vars": 2
+  },
+  "extends": "eslint:recommended",
+  "plugins": [
+    "react"
+  ],
+  "parserOptions": {
+    "ecmaFeatures": {
+      "jsx": true,
+      "modules": true
+    }
+  }
+}
