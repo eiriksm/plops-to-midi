@@ -15,8 +15,10 @@ function messageToTone(tones, data, offset) {
 let readyInstruments = {};
 
 function play(data, state, instrument) {
+  if (!data) {
+    return;
+  }
   let tone = messageToTone(state.tones, data, state.offset);
-  console.log(tone)
   setTimeout(() => {
     let source = instrument.play(tone, 0);
     source.loop = true;
@@ -65,9 +67,9 @@ const Instrument = React.createClass({
         <select onChange={this._onInstrumentChange} defaultValue={this.state.currentInstrument}>
           {instrumentsOptions}
         </select>
-        <input type="text" onChange={this._changedOffset} value={this.state.offset} />
-        <input type="text" onChange={this._changedDelay} value={this.state.delay} />
-        <input type="text" onChange={this._changedStop} value={this.state.stop} />
+        <input type="number" onChange={this._changedOffset} value={this.state.offset} />
+        <input type="number" onChange={this._changedDelay} value={this.state.delay} />
+        <input type="number" onChange={this._changedStop} value={this.state.stop} />
       </div>
     )
   },
