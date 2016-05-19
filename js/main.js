@@ -36,7 +36,8 @@ const App = React.createClass({
     return {
       message,
       tones: tonesMap.am,
-      tune: 0
+      tune: 0,
+      instruments: ['Bass']
     }
   },
   render: function () {
@@ -59,6 +60,11 @@ const App = React.createClass({
         <option value={i} key={i}>{n.name}</option>
       )
     })
+    let instruments = this.state.instruments.map((n, i) => {
+      return (
+        <Instrument key={i} onRemove={this._onRemove.bind(this, i)} name={n} message={this.state.message} tones={this.state.tones} instrument="church_organ" />
+      )
+    })
     return (
       <div>
         <select onChange={this._changedTones} defaultValue="am">
@@ -69,10 +75,20 @@ const App = React.createClass({
         <select onChange={this._changedTune} defaultValue="am">
           {tunesOptions}
         </select>
-        <Instrument name="Bass" message={this.state.message} tones={this.state.tones} instrument="fx_6_goblins" />
-        <Instrument name="Lead" message={this.state.message} tones={this.state.tones} instrument="church_organ" delay="2" offset="4"/>
+        {instruments}
+        <button onClick={this._addInstrument}>+</button>
       </div>
     )
+  },
+  _onRemove: function(delta) {
+    this.setState({
+      instruments: this.state.instruments.filter((n, i) => { return i !== delta})
+    })
+  },
+  _addInstrument: function() {
+    this.setState({
+      instruments: this.state.instruments.concat([window.prompt('Enter instrument name')])
+    })
   },
   _changedTune: function(e) {
     this.setState({

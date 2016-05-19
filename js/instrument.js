@@ -70,6 +70,7 @@ const Instrument = React.createClass({
         <input type="number" onChange={this._changedOffset} value={this.state.offset} />
         <input type="number" onChange={this._changedDelay} value={this.state.delay} />
         <input type="number" onChange={this._changedStop} value={this.state.stop} />
+        <button onClick={this.props.onRemove}>-</button>
       </div>
     )
   },

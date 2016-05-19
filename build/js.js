@@ -81,7 +81,12 @@ const Instrument = React.createClass({
       ),
       React.createElement('input', { type: 'number', onChange: this._changedOffset, value: this.state.offset }),
       React.createElement('input', { type: 'number', onChange: this._changedDelay, value: this.state.delay }),
-      React.createElement('input', { type: 'number', onChange: this._changedStop, value: this.state.stop })
+      React.createElement('input', { type: 'number', onChange: this._changedStop, value: this.state.stop }),
+      React.createElement(
+        'button',
+        { onClick: this.props.onRemove },
+        '-'
+      )
     );
   },
   _changedStop: function (e) {
@@ -148,7 +153,8 @@ const App = React.createClass({
     return {
       message,
       tones: tonesMap.am,
-      tune: 0
+      tune: 0,
+      instruments: ['Bass']
     };
   },
   render: function () {
@@ -172,6 +178,9 @@ const App = React.createClass({
         { value: i, key: i },
         n.name
       );
+    });
+    let instruments = this.state.instruments.map((n, i) => {
+      return React.createElement(Instrument, { key: i, onRemove: this._onRemove.bind(this, i), name: n, message: this.state.message, tones: this.state.tones, instrument: 'church_organ' });
     });
     return React.createElement(
       'div',
@@ -200,9 +209,25 @@ const App = React.createClass({
         { onChange: this._changedTune, defaultValue: 'am' },
         tunesOptions
       ),
-      React.createElement(Instrument, { name: 'Bass', message: this.state.message, tones: this.state.tones, instrument: 'fx_6_goblins' }),
-      React.createElement(Instrument, { name: 'Lead', message: this.state.message, tones: this.state.tones, instrument: 'church_organ', delay: '2', offset: '4' })
+      instruments,
+      React.createElement(
+        'button',
+        { onClick: this._addInstrument },
+        '+'
+      )
     );
+  },
+  _onRemove: function (delta) {
+    this.setState({
+      instruments: this.state.instruments.filter((n, i) => {
+        return i !== delta;
+      })
+    });
+  },
+  _addInstrument: function () {
+    this.setState({
+      instruments: this.state.instruments.concat([window.prompt('Enter instrument name')])
+    });
   },
   _changedTune: function (e) {
     this.setState({
