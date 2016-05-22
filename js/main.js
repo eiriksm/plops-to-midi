@@ -33,14 +33,32 @@ const App = React.createClass({
         message
       })
     }
-    return {
+    // See if the URL contains some state info.
+    let defaultOps = {
       message,
       tones: tonesMap.am,
+      tonesKey: 0,
       tune: 0,
-      instruments: ['Bass']
+      instruments: [{name: 'Bass'}]
     }
+    if (window.location.hash) {
+      try {
+        var data = JSON.parse(atob(window.location.hash.substr(1)));
+        Object.assign(defaultOps, data);
+      }
+      catch (err) {
+        // Oh well, at least we tried.
+        console.log(err)
+      }
+    }
+    return defaultOps
   },
   render: function () {
+    window.location.hash = btoa(JSON.stringify({
+      instruments: this.state.instruments,
+      tune: this.state.tune,
+      tonesKey: this.state.tonesKey
+    }));
     if (tunes[this.state.tune].data) {
       // Play the next tone, after the given amount of time.
       let linesToEmit = tunes[this.state.tune].data
@@ -62,23 +80,36 @@ const App = React.createClass({
     })
     let instruments = this.state.instruments.map((n, i) => {
       return (
-        <Instrument key={i} onRemove={this._onRemove.bind(this, i)} name={n} message={this.state.message} tones={this.state.tones} instrument="church_organ" />
+        <Instrument key={i} onEdit={this._onInstrumentEdit.bind(this, i)} onRemove={this._onRemove.bind(this, i)} data={n} message={this.state.message} tones={this.state.tones} instrument="church_organ" />
       )
     })
     return (
       <div>
-        <select onChange={this._changedTones} defaultValue="am">
+        <select onChange={this._changedTones} defaultValue={this.state.tonesKey}>
           <option value="am">A minor</option>
           <option value="em">E minor</option>
           <option value="dm">D minor</option>
         </select>
-        <select onChange={this._changedTune} defaultValue="am">
+        <select onChange={this._changedTune} defaultValue={this.state.tune}>
           {tunesOptions}
         </select>
         {instruments}
         <button onClick={this._addInstrument}>+</button>
+        <button onClick={this._onStopToggle}>
+        </button>
       </div>
     )
+  },
+  _onStopToggle: function() {
+    this.setState({
+      playing: !this.state.playing
+    })
+  },
+  _onInstrumentEdit: function(delta, data) {
+    Object.assign(this.state.instruments[delta], data);
+    this.setState({
+      intruments: this.state.instruments[delta]
+    });
   },
   _onRemove: function(delta) {
     this.setState({
@@ -87,7 +118,7 @@ const App = React.createClass({
   },
   _addInstrument: function() {
     this.setState({
-      instruments: this.state.instruments.concat([window.prompt('Enter instrument name')])
+      instruments: this.state.instruments.concat([{name: window.prompt('Enter instrument name')}])
     })
   },
   _changedTune: function(e) {
@@ -97,7 +128,8 @@ const App = React.createClass({
   },
   _changedTones: function(e) {
     this.setState({
-      tones: tonesMap[e.target.value]
+      tones: tonesMap[e.target.value],
+      tonesKey: e.target.value
     })
   }
 })

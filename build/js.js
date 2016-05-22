@@ -32,12 +32,13 @@ function play(data, state, instrument) {
 
 const Instrument = React.createClass({
   getInitialState: function () {
-    return {
+    let opts = Object.assign({
       currentInstrument: this.props.instrument,
       offset: this.props.offset ? this.props.offset : '1',
       stop: 2,
       delay: this.props.delay ? this.props.delay : 0
-    };
+    }, this.props.data);
+    return opts;
   },
   render: function () {
     let data = this.props.message.data;
@@ -72,7 +73,7 @@ const Instrument = React.createClass({
       React.createElement(
         'h2',
         null,
-        this.props.name
+        this.props.data.name
       ),
       React.createElement(
         'select',
@@ -93,21 +94,31 @@ const Instrument = React.createClass({
     this.setState({
       stop: parseInt(e.target.value, 10) ? parseInt(e.target.value, 10) : 0
     });
+    this._passState();
   },
   _changedDelay: function (e) {
     this.setState({
       delay: parseInt(e.target.value, 10) ? parseInt(e.target.value, 10) : 0
     });
+    this._passState();
   },
   _changedOffset: function (e) {
     this.setState({
       offset: '' + e.target.value
     });
+    this._passState();
   },
   _onInstrumentChange: function (e) {
     this.setState({
       currentInstrument: e.target.value
     });
+    this._passState();
+  },
+  _passState: function () {
+    // Hack to make sure state is updated before we pass it up the stack.
+    setTimeout(() => {
+      this.props.onEdit(this.state);
+    }, 200);
   }
 });
 
@@ -150,14 +161,31 @@ const App = React.createClass({
         message
       });
     };
-    return {
+    // See if the URL contains some state info.
+    let defaultOps = {
       message,
       tones: tonesMap.am,
+      tonesKey: 0,
       tune: 0,
-      instruments: ['Bass']
+      instruments: [{ name: 'Bass' }]
     };
+    if (window.location.hash) {
+      try {
+        var data = JSON.parse(atob(window.location.hash.substr(1)));
+        Object.assign(defaultOps, data);
+      } catch (err) {
+        // Oh well, at least we tried.
+        console.log(err);
+      }
+    }
+    return defaultOps;
   },
   render: function () {
+    window.location.hash = btoa(JSON.stringify({
+      instruments: this.state.instruments,
+      tune: this.state.tune,
+      tonesKey: this.state.tonesKey
+    }));
     if (tunes[this.state.tune].data) {
       // Play the next tone, after the given amount of time.
       let linesToEmit = tunes[this.state.tune].data;
@@ -180,14 +208,14 @@ const App = React.createClass({
       );
     });
     let instruments = this.state.instruments.map((n, i) => {
-      return React.createElement(Instrument, { key: i, onRemove: this._onRemove.bind(this, i), name: n, message: this.state.message, tones: this.state.tones, instrument: 'church_organ' });
+      return React.createElement(Instrument, { key: i, onEdit: this._onInstrumentEdit.bind(this, i), onRemove: this._onRemove.bind(this, i), data: n, message: this.state.message, tones: this.state.tones, instrument: 'church_organ' });
     });
     return React.createElement(
       'div',
       null,
       React.createElement(
         'select',
-        { onChange: this._changedTones, defaultValue: 'am' },
+        { onChange: this._changedTones, defaultValue: this.state.tonesKey },
         React.createElement(
           'option',
           { value: 'am' },
@@ -206,7 +234,7 @@ const App = React.createClass({
       ),
       React.createElement(
         'select',
-        { onChange: this._changedTune, defaultValue: 'am' },
+        { onChange: this._changedTune, defaultValue: this.state.tune },
         tunesOptions
       ),
       instruments,
@@ -214,8 +242,20 @@ const App = React.createClass({
         'button',
         { onClick: this._addInstrument },
         '+'
-      )
+      ),
+      React.createElement('button', { onClick: this._onStopToggle })
     );
+  },
+  _onStopToggle: function () {
+    this.setState({
+      playing: !this.state.playing
+    });
+  },
+  _onInstrumentEdit: function (delta, data) {
+    Object.assign(this.state.instruments[delta], data);
+    this.setState({
+      intruments: this.state.instruments[delta]
+    });
   },
   _onRemove: function (delta) {
     this.setState({
@@ -226,7 +266,7 @@ const App = React.createClass({
   },
   _addInstrument: function () {
     this.setState({
-      instruments: this.state.instruments.concat([window.prompt('Enter instrument name')])
+      instruments: this.state.instruments.concat([{ name: window.prompt('Enter instrument name') }])
     });
   },
   _changedTune: function (e) {
@@ -236,7 +276,8 @@ const App = React.createClass({
   },
   _changedTones: function (e) {
     this.setState({
-      tones: tonesMap[e.target.value]
+      tones: tonesMap[e.target.value],
+      tonesKey: e.target.value
     });
   }
 });

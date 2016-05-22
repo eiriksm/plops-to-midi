@@ -30,12 +30,13 @@ function play(data, state, instrument) {
 
 const Instrument = React.createClass({
   getInitialState: function() {
-    return {
+    let opts = Object.assign({
       currentInstrument: this.props.instrument,
       offset: this.props.offset ? this.props.offset : '1',
       stop: 2,
       delay: this.props.delay ? this.props.delay : 0
-    }
+    }, this.props.data);
+    return opts
   },
   render: function() {
     let data = this.props.message.data;
@@ -63,7 +64,7 @@ const Instrument = React.createClass({
     })
     return (
       <div>
-        <h2>{this.props.name}</h2>
+        <h2>{this.props.data.name}</h2>
         <select onChange={this._onInstrumentChange} defaultValue={this.state.currentInstrument}>
           {instrumentsOptions}
         </select>
@@ -78,21 +79,31 @@ const Instrument = React.createClass({
     this.setState({
       stop: parseInt(e.target.value, 10) ? parseInt(e.target.value, 10) : 0
     })
+    this._passState();
   },
   _changedDelay: function(e) {
     this.setState({
       delay: parseInt(e.target.value, 10) ? parseInt(e.target.value, 10) : 0
     })
+    this._passState();
   },
   _changedOffset: function(e) {
     this.setState({
       offset: '' + e.target.value
     })
+    this._passState();
   },
   _onInstrumentChange: function(e) {
     this.setState({
       currentInstrument: e.target.value
     });
+    this._passState();
+  },
+  _passState: function() {
+    // Hack to make sure state is updated before we pass it up the stack.
+    setTimeout(() => {
+      this.props.onEdit(this.state);
+    }, 200);
   }
 })
 
