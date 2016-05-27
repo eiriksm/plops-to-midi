@@ -37,9 +37,11 @@ const App = React.createClass({
     let defaultOps = {
       message,
       tones: tonesMap.am,
+      melody: '',
       tonesKey: 0,
       tune: 0,
-      instruments: [{name: 'Bass'}]
+      instruments: [{name: 'Bass'}],
+      playing: true
     }
     if (window.location.hash) {
       try {
@@ -57,7 +59,8 @@ const App = React.createClass({
     window.location.hash = btoa(JSON.stringify({
       instruments: this.state.instruments,
       tune: this.state.tune,
-      tonesKey: this.state.tonesKey
+      tonesKey: this.state.tonesKey,
+      melody: this.state.melody
     }));
     if (tunes[this.state.tune].data) {
       // Play the next tone, after the given amount of time.
@@ -80,7 +83,7 @@ const App = React.createClass({
     })
     let instruments = this.state.instruments.map((n, i) => {
       return (
-        <Instrument key={i} onEdit={this._onInstrumentEdit.bind(this, i)} onRemove={this._onRemove.bind(this, i)} data={n} message={this.state.message} tones={this.state.tones} instrument="church_organ" />
+        <Instrument key={i} playing={this.state.playing} onEdit={this._onInstrumentEdit.bind(this, i)} onRemove={this._onRemove.bind(this, i)} data={n} message={this.state.message} tones={this.state.tones} instrument="church_organ" />
       )
     })
     return (
@@ -96,19 +99,27 @@ const App = React.createClass({
         {instruments}
         <button onClick={this._addInstrument}>+</button>
         <button onClick={this._onStopToggle}>
+        stop
         </button>
       </div>
     )
   },
-  _onStopToggle: function() {
+  _melodyChanged: function(e) {
     this.setState({
-      playing: !this.state.playing
+      melody: e.target.value
+    });
+  },
+  _onStopToggle: function() {
+    console.log(this.state.playing)
+    this.setState({
+      playing: !this.state.playing,
+      instruments: this.state.instruments
     })
   },
   _onInstrumentEdit: function(delta, data) {
     Object.assign(this.state.instruments[delta], data);
     this.setState({
-      intruments: this.state.instruments[delta]
+      intruments: this.state.instruments
     });
   },
   _onRemove: function(delta) {
