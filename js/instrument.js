@@ -26,9 +26,7 @@ function play(data, state, instrument) {
   let tone = messageToTone(state.tones, data, state.offset);
   if (state.melody && state.melody.length) {
     let melodyArray = state.melody.split(',');
-    console.log(melodyArray, delta)
     tone = createToneWithOctave(state.tones[melodyArray[delta % melodyArray.length]], state.offset);
-    console.log(tone)
   }
   delta++;
   setTimeout(() => {
