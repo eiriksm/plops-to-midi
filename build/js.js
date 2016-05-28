@@ -9,24 +9,36 @@ const LOADING_INSTRUMENT = 2;
 
 let sf;
 
+function createToneWithOctave(tone, octave) {
+  return tone + '' + octave;
+}
+
 function messageToTone(tones, data, offset) {
   var num = parseInt(data * 1000, 10);
-  return tones[num % tones.length] + '' + offset;
+  return createToneWithOctave(tones[num % tones.length], offset);
 }
 
 let readyInstruments = {};
 
 function play(data, state, instrument) {
+  let delta = state.delta;
   if (!data) {
     return;
   }
   let tone = messageToTone(state.tones, data, state.offset);
+  if (state.melody && state.melody.length) {
+    let melodyArray = state.melody.split(',');
+    tone = createToneWithOctave(state.tones[melodyArray[delta % melodyArray.length]], state.offset);
+  }
+  delta++;
   setTimeout(() => {
-    let source = instrument.play(tone, 0);
-    source.loop = true;
-    setTimeout(function () {
-      source.stop();
-    }, data * (state.stop * 100000));
+    if (state.playing) {
+      let source = instrument.play(tone, 0);
+      source.loop = true;
+      setTimeout(function () {
+        source.stop();
+      }, state.stop * 1000);
+    }
   }, state.delay * 1000);
 }
 
@@ -36,15 +48,21 @@ const Instrument = React.createClass({
       currentInstrument: this.props.instrument,
       offset: this.props.offset ? this.props.offset : '1',
       stop: 2,
-      delay: this.props.delay ? this.props.delay : 0
+      delay: this.props.delay ? this.props.delay : 0,
+      playing: this.props.playing ? this.props.playing : true,
+      melody: this.props.melody ? this.props.melody : ''
     }, this.props.data);
     return opts;
   },
+  delta: -1,
   render: function () {
     let data = this.props.message.data;
     let name = this.state.currentInstrument;
     // Pretend to hold tones in state.
     this.state.tones = this.props.tones;
+    this.state.playing = this.props.playing;
+    this.state.delta = this.delta;
+    this.delta++;
     if (name) {
       let instrument = sf.instrument(name);
       if (readyInstruments[name] === LOADED_INSTRUMENT) {
@@ -76,10 +94,18 @@ const Instrument = React.createClass({
         this.props.data.name
       ),
       React.createElement(
+        'span',
+        null,
+        'Playing: ',
+        this.state.playing ? 'yes' : 'no',
+        ' '
+      ),
+      React.createElement(
         'select',
         { onChange: this._onInstrumentChange, defaultValue: this.state.currentInstrument },
         instrumentsOptions
       ),
+      React.createElement('input', { type: 'text', onChange: this._changedMelody, value: this.state.melody }),
       React.createElement('input', { type: 'number', onChange: this._changedOffset, value: this.state.offset }),
       React.createElement('input', { type: 'number', onChange: this._changedDelay, value: this.state.delay }),
       React.createElement('input', { type: 'number', onChange: this._changedStop, value: this.state.stop }),
@@ -89,6 +115,12 @@ const Instrument = React.createClass({
         '-'
       )
     );
+  },
+  _changedMelody: function (e) {
+    this.setState({
+      melody: e.target.value
+    });
+    this._passState();
   },
   _changedStop: function (e) {
     this.setState({
@@ -165,9 +197,12 @@ const App = React.createClass({
     let defaultOps = {
       message,
       tones: tonesMap.am,
+      melody: '',
       tonesKey: 0,
       tune: 0,
-      instruments: [{ name: 'Bass' }]
+      instruments: [{ name: 'Bass' }],
+      playing: true,
+      delta: 0
     };
     if (window.location.hash) {
       try {
@@ -184,12 +219,16 @@ const App = React.createClass({
     window.location.hash = btoa(JSON.stringify({
       instruments: this.state.instruments,
       tune: this.state.tune,
-      tonesKey: this.state.tonesKey
+      tonesKey: this.state.tonesKey,
+      melody: this.state.melody
     }));
     if (tunes[this.state.tune].data) {
       // Play the next tone, after the given amount of time.
       let linesToEmit = tunes[this.state.tune].data;
-      let emit = line => {
+      let emit = (line, delta) => {
+        if (delta != this.state.delta) {
+          return;
+        }
         this.setState({
           message: {
             data: line[1]
@@ -198,7 +237,7 @@ const App = React.createClass({
       };
       let line = linesToEmit[currentDelta];
       currentDelta++;
-      setTimeout(emit.bind(this, line), linesToEmit[currentDelta][0] - line[0]);
+      setTimeout(emit.bind(this, line, this.state.delta), linesToEmit[currentDelta][0] - line[0]);
     }
     let tunesOptions = tunes.map((n, i) => {
       return React.createElement(
@@ -208,7 +247,7 @@ const App = React.createClass({
       );
     });
     let instruments = this.state.instruments.map((n, i) => {
-      return React.createElement(Instrument, { key: i, onEdit: this._onInstrumentEdit.bind(this, i), onRemove: this._onRemove.bind(this, i), data: n, message: this.state.message, tones: this.state.tones, instrument: 'church_organ' });
+      return React.createElement(Instrument, { key: i, playing: this.state.playing, onEdit: this._onInstrumentEdit.bind(this, i), onRemove: this._onRemove.bind(this, i), data: n, message: this.state.message, tones: this.state.tones, instrument: 'church_organ' });
     });
     return React.createElement(
       'div',
@@ -243,41 +282,58 @@ const App = React.createClass({
         { onClick: this._addInstrument },
         '+'
       ),
-      React.createElement('button', { onClick: this._onStopToggle })
+      React.createElement(
+        'button',
+        { onClick: this._onStopToggle },
+        'stop'
+      )
     );
+  },
+  _melodyChanged: function (e) {
+    this.setState({
+      melody: e.target.value,
+      delta: this.state.delta + 1
+    });
   },
   _onStopToggle: function () {
     this.setState({
-      playing: !this.state.playing
+      playing: !this.state.playing,
+      instruments: this.state.instruments,
+      delta: this.state.delta + 1
     });
   },
   _onInstrumentEdit: function (delta, data) {
     Object.assign(this.state.instruments[delta], data);
     this.setState({
-      intruments: this.state.instruments[delta]
+      intruments: this.state.instruments,
+      delta: this.state.delta + 1
     });
   },
   _onRemove: function (delta) {
     this.setState({
       instruments: this.state.instruments.filter((n, i) => {
         return i !== delta;
-      })
+      }),
+      delta: this.state.delta + 1
     });
   },
   _addInstrument: function () {
     this.setState({
-      instruments: this.state.instruments.concat([{ name: window.prompt('Enter instrument name') }])
+      instruments: this.state.instruments.concat([{ name: window.prompt('Enter instrument name') }]),
+      delta: this.state.delta + 1
     });
   },
   _changedTune: function (e) {
     this.setState({
-      tune: e.target.value
+      tune: e.target.value,
+      delta: this.state.delta + 1
     });
   },
   _changedTones: function (e) {
     this.setState({
       tones: tonesMap[e.target.value],
-      tonesKey: e.target.value
+      tonesKey: e.target.value,
+      delta: this.state.delta + 1
     });
   }
 });
