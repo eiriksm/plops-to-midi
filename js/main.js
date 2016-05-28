@@ -41,7 +41,8 @@ const App = React.createClass({
       tonesKey: 0,
       tune: 0,
       instruments: [{name: 'Bass'}],
-      playing: true
+      playing: true,
+      delta: 0
     }
     if (window.location.hash) {
       try {
@@ -65,7 +66,10 @@ const App = React.createClass({
     if (tunes[this.state.tune].data) {
       // Play the next tone, after the given amount of time.
       let linesToEmit = tunes[this.state.tune].data
-      let emit = (line) => {
+      let emit = (line, delta) => {
+        if (delta != this.state.delta) {
+          return;
+        }
         this.setState({
           message: {
             data: line[1]
@@ -74,7 +78,7 @@ const App = React.createClass({
       }
       let line = linesToEmit[currentDelta];
       currentDelta++;
-      setTimeout(emit.bind(this, line), linesToEmit[currentDelta][0] - line[0]);
+      setTimeout(emit.bind(this, line, this.state.delta), linesToEmit[currentDelta][0] - line[0]);
     }
     let tunesOptions = tunes.map((n, i) => {
       return (
@@ -106,41 +110,47 @@ const App = React.createClass({
   },
   _melodyChanged: function(e) {
     this.setState({
-      melody: e.target.value
+      melody: e.target.value,
+      delta: this.state.delta + 1
     });
   },
   _onStopToggle: function() {
-    console.log(this.state.playing)
     this.setState({
       playing: !this.state.playing,
-      instruments: this.state.instruments
+      instruments: this.state.instruments,
+      delta: this.state.delta + 1
     })
   },
   _onInstrumentEdit: function(delta, data) {
     Object.assign(this.state.instruments[delta], data);
     this.setState({
-      intruments: this.state.instruments
+      intruments: this.state.instruments,
+      delta: this.state.delta + 1
     });
   },
   _onRemove: function(delta) {
     this.setState({
-      instruments: this.state.instruments.filter((n, i) => { return i !== delta})
+      instruments: this.state.instruments.filter((n, i) => { return i !== delta}),
+      delta: this.state.delta + 1
     })
   },
   _addInstrument: function() {
     this.setState({
-      instruments: this.state.instruments.concat([{name: window.prompt('Enter instrument name')}])
+      instruments: this.state.instruments.concat([{name: window.prompt('Enter instrument name')}]),
+      delta: this.state.delta + 1
     })
   },
   _changedTune: function(e) {
     this.setState({
-      tune: e.target.value
+      tune: e.target.value,
+      delta: this.state.delta + 1
     })
   },
   _changedTones: function(e) {
     this.setState({
       tones: tonesMap[e.target.value],
-      tonesKey: e.target.value
+      tonesKey: e.target.value,
+      delta: this.state.delta + 1
     })
   }
 })
